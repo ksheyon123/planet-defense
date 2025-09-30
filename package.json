@@ -39,6 +39,10 @@
     "webpack-dev-server": "^4.15.1"
   },
   "dependencies": {
+    "@babylonjs/core": "^8.29.0",
+    "@babylonjs/gui": "^8.29.0",
+    "@babylonjs/loaders": "^8.29.0",
+    "@babylonjs/materials": "^8.29.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }
