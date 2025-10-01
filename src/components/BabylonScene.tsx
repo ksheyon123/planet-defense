@@ -1,46 +1,19 @@
-import React, { useEffect, useRef } from "react";
-import {
-  Engine,
-  Scene,
-  ArcRotateCamera,
-  HemisphericLight,
-  MeshBuilder,
-  Vector3,
-} from "@babylonjs/core";
+import { useEffect } from "react";
+import { MeshBuilder } from "@babylonjs/core";
+import { useBabylon } from "@/contexts/BabylonContext";
+import * as BABYLON from "@babylonjs/core";
+import { Player } from "@/modules/Player";
 
-const BabylonScene: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engineRef = useRef<Engine | null>(null);
-  const sceneRef = useRef<Scene | null>(null);
+const BabylonScene = ({}) => {
+  const { scene, isReady } = useBabylon();
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-
-    // BabylonJS 엔진 생성
-    const engine = new Engine(canvasRef.current, true);
-    engineRef.current = engine;
-
-    // 씬 생성
-    const scene = new Scene(engine);
-    sceneRef.current = scene;
-
-    // 카메라 생성
-    const camera = new ArcRotateCamera(
-      "camera",
-      -Math.PI / 2,
-      Math.PI / 2.5,
-      10,
-      Vector3.Zero(),
-      scene
-    );
-    camera.attachControl(canvasRef.current, true);
-
-    // 조명 생성
-    const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
+    if (!scene || !isReady) return;
 
     // 간단한 구 생성
     const sphere = MeshBuilder.CreateSphere("sphere", { diameter: 2 }, scene);
     sphere.position.y = 1;
+    const player = new Player(sphere, scene, 1);
 
     // 바닥 생성
     const ground = MeshBuilder.CreateGround(
@@ -49,33 +22,33 @@ const BabylonScene: React.FC = () => {
       scene
     );
 
-    // 렌더 루프
-    engine.runRenderLoop(() => {
-      scene.render();
+    scene.onKeyboardObservable.add((kbInfo) => {
+      if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
+        player.updateInput(kbInfo.event.key, true);
+      } else if (kbInfo.type === BABYLON.KeyboardEventTypes.KEYUP) {
+        player.updateInput(kbInfo.event.key, false);
+      }
     });
 
-    // 윈도우 리사이즈 처리
-    const handleResize = () => {
-      engine.resize();
-    };
-    window.addEventListener("resize", handleResize);
+    scene.onBeforeRenderObservable.add(() => {
+      let lastTime = Date.now();
+      const currentTime = Date.now();
+      const deltaTime = (currentTime - lastTime) / 1000; // 초 단위
+      lastTime = currentTime;
+
+      player.update(deltaTime);
+    });
 
     // 클린업 함수
     return () => {
-      window.removeEventListener("resize", handleResize);
-      engine.dispose();
+      // 생성한 객체들을 제거
+      sphere.dispose();
+      ground.dispose();
     };
-  }, []);
+  }, [scene, isReady]);
 
-  return (
-    <div className="w-full h-full">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full"
-        style={{ width: "100%", height: "100%" }}
-      />
-    </div>
-  );
+  // Provider가 Canvas를 제공하므로 빈 div만 반환
+  return null;
 };
 
 export default BabylonScene;
